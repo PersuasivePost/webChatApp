@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import { CsrfTokenController } from 'src/csrf-token.controller';
+//import { CsrfTokenController } from 'src/csrf-token.controller';
 
 @Module({
   imports: [PrismaModule, UsersModule, AuthModule],
-  controllers: [CsrfTokenController],
+  //controllers: [CsrfTokenController],
+  controllers: [],
   providers: [],
 })
 export class AppModule {}
