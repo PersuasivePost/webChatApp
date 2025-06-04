@@ -1,7 +1,8 @@
 # Phases of backend:
 
 1. Phase 1: Database Schema Design with Prisma
-2. Phase 2: Authentication System
+2. Phase 2: Authentication System:
+   doing basic jwt, later on update with passport(google and other stuffs)
 3. Phase 3: WebSocket Gateway Implementation
 4. Phase 4: Friendship System
 5. Phase 5: Chat Functionality
