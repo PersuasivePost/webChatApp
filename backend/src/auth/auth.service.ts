@@ -42,11 +42,17 @@ export class AuthService {
     };
   }
 
-  async login(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
+  async login(emailOrUsername: string, password: string) {
+    const user =
+      (await this.usersService.findByEmail(emailOrUsername)) ||
+      (await this.usersService.findByUsername?.(emailOrUsername)) ||
+      (await this.usersService.findByEmailOrUsername(
+        emailOrUsername,
+        emailOrUsername,
+      ));
 
     if (!user || !(await argon2.verify(user.password, password))) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException('Invalid email/username or password');
     }
 
     const accessToken = this.signToken(user.id, user.email, user.username);

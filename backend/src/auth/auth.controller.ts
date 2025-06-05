@@ -25,7 +25,11 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(@Body() dto: LoginDto) {
-    return await this.authService.login(dto.email, dto.password);
+    const emailOrUsername = dto.email || dto.username;
+    if (!emailOrUsername) {
+      throw new Error('Email or username must be provided');
+    }
+    return await this.authService.login(emailOrUsername, dto.password);
   }
 
   @UseGuards(JwtGuard)
