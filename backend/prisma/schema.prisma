@@ -31,6 +31,8 @@ model User {
   groupMemberships GroupMembers[]
 
   messages Message[] @relation("UserMessages")
+
+  DeletedMessage DeletedMessage[]
 }
 
 model Friendship {
@@ -88,6 +90,21 @@ model Message {
 
   sender User @relation("UserMessages", fields: [senderId], references: [id])
   group Group? @relation("GroupMessages", fields: [groupId], references: [id])
+
+  DeletedMessage DeletedMessage[]
 }
 
 // To be added later my friend
+
+model DeletedMessage {
+  id String @id @default(uuid())
+  messageId String
+  userId String
+  deletedAt DateTime @default(now())
+  // Relations
+
+  message Message @relation(fields: [messageId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId]) 
+}
