@@ -1,4 +1,9 @@
-import { UseGuards, UsePipes } from '@nestjs/common';
+import {
+  UseFilters,
+  UseGuards,
+  UseInterceptors,
+  UsePipes,
+} from '@nestjs/common';
 import {
   OnGatewayInit,
   OnGatewayConnection,
@@ -11,9 +16,15 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 import { MessageDto } from './dto/message.dto';
+import { WsExceptionFilter } from './filters';
+import { JwtGuard } from 'src/auth/guards';
+import { LoggingInterceptor } from './interceptors/logging.interceptor';
+import { MessageValidationPipe } from './pipes/message-validation.pipe';
 
 @WebSocketGateway({ cors: true })
-@UseGuards(JwtAuthWsGuard)
+@UseFilters(WsExceptionFilter)
+@UseInterceptors(LoggingInterceptor)
+@UseGuards(JwtGuard)
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
@@ -34,7 +45,7 @@ export class ChatGateway
     console.log(`Client disconnected: ${client.id}`);
   }
 
-  @SubscribeMessage('joinRoon')
+  @SubscribeMessage('joinRoom')
   handleJoinRoom(
     @MessageBody() roomId: string,
     @ConnectedSocket() client: Socket,
@@ -62,9 +73,16 @@ export class ChatGateway
       message,
       client.data.user.id,
     );
-    this.server
-      .to(message.groudId || message.to)
-      .emit('receivedMessage', saved);
+    const targetRoom = message.groudId || message.to;
+    if (targetRoom) {
+      this.server.to(targetRoom).emit('receivedMessage', saved);
+    } else {
+      //
+      console.log('Neither groupId nor to provided in message');
+    }
+    // this.server
+    //   .to(message.groudId || message.to)
+    //   .emit('receivedMessage', saved);
     return { status: 'ok' };
   }
 
