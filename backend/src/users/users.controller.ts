@@ -45,4 +45,9 @@ export class UsersController {
   async getFriendRequests(@Request() req) {
     return this.usersService.getFriendRequests(req.user.id);
   }
+
+  @Get('groups')
+  async getUserGroups(@Request() req) {
+    return this.usersService.getUserGroups(req.user.id);
+  }
 }
