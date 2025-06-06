@@ -60,4 +60,34 @@ export class ChatService {
     });
     return { messageId };
   }
+
+  async getChatHistory(roomId: string, userId: string) {
+    // For group chat
+    const groupMessages = await this.prisma.message.findMany({
+      where: {
+        groupId: roomId,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      include: {
+        sender: true,
+      },
+    });
+
+    // For private chat
+    const privateMessages = await this.prisma.message.findMany({
+      where: {
+        privateChatId: roomId,
+      },
+      orderBy: {
+        createdAt: 'asc',
+      },
+      include: {
+        sender: true,
+      },
+    });
+
+    return [...groupMessages, ...privateMessages];
+  }
 }
