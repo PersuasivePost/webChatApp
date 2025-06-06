@@ -20,6 +20,8 @@ import { WsExceptionFilter } from './filters';
 import { JwtGuard } from 'src/auth/guards';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { MessageValidationPipe } from './pipes/message-validation.pipe';
+import { createClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
 
 @WebSocketGateway({ cors: true })
 @UseFilters(WsExceptionFilter)
@@ -32,9 +34,17 @@ export class ChatGateway
 
   constructor(private readonly chatService: ChatService) {}
 
-  afterInit(server: Server) {
+  async afterInit(server: Server) {
     this.server = server;
-    console.log('WebSocket server initialized');
+    // Redis connection
+    const pubClient = createClient({ url: process.env.REDIS_URL });
+    const subClient = pubClient.duplicate();
+
+    await pubClient.connect();
+    await subClient.connect();
+
+    this.server.adapter(createAdapter(pubClient, subClient));
+    console.log('WebSocket server initialized with Redis adapter');
   }
 
   handleConnection(client: Socket) {
