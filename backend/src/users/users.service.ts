@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { FriendshipStatus, User } from '../../generated/prisma';
 import { PrismaService } from 'src/prisma/prisma.service';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class UsersService {
@@ -144,6 +145,100 @@ export class UsersService {
     return this.prisma.groupMembers.findMany({
       where: { userId },
       include: { group: true },
+    });
+  }
+
+  // Update user profile
+  async updateUserProfile(
+    userId: string,
+    updateData: Partial<{
+      username: string;
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+    }>,
+  ): Promise<User> {
+    const user = await this.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check for mail and username conflicts
+    if (updateData.email && updateData.email !== user.email) {
+      const existingUserByEmail = await this.findByEmail(updateData.email);
+      if (existingUserByEmail && existingUserByEmail.id !== userId) {
+        throw new ForbiddenException('Email is already in use');
+      }
+    }
+
+    if (updateData.username && updateData.username !== user.username) {
+      const existingUserByusername = await this.findByUsername(
+        updateData.username,
+      );
+      if (existingUserByusername && existingUserByusername.id !== userId) {
+        throw new ForbiddenException('Username is already in use');
+      }
+    }
+
+    if (updateData.password) {
+      try {
+        const hashedPassword = await argon2.hash(updateData.password);
+        updateData.password = hashedPassword;
+      } catch (error) {
+        console.error('Error hashing password with argon2:', error);
+        throw error;
+      }
+    }
+
+    return this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        ...updateData,
+      },
+    });
+  }
+
+  // User search by username or email
+  async searchUsers(
+    query: string,
+    excludeUserId?: string,
+  ): Promise<
+    Array<{
+      id: string;
+      username: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+    }>
+  > {
+    if (!query || query.trim().length === 0) {
+      return [];
+    }
+
+    return this.prisma.user.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { username: { contains: query, mode: 'insensitive' } },
+              { email: { contains: query, mode: 'insensitive' } },
+            ],
+          },
+          excludeUserId ? { id: { not: excludeUserId } } : {},
+        ],
+      },
+
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+      },
+      take: 20, // Limit results to 20
     });
   }
 }

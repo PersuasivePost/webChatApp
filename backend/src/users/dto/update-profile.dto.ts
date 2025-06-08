@@ -1,43 +1,44 @@
 import {
   IsEmail,
-  IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
 
-export class RegisterDto {
+export class UpdateProfileDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MinLength(3, { message: 'Username must be at least 3 characters long' })
   @MaxLength(20, { message: 'Username must not exceed 20 characters' })
   @Matches(/^[a-zA-Z0-9_.-]+$/, {
     message:
       'Username can only contain letters, numbers, underscores, hyphens, and periods',
   })
-  username: string;
+  username?: string;
 
   @IsEmail({}, { message: 'Invalid email format' })
-  email: string;
+  @IsOptional()
+  email?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MinLength(8, { message: 'Password must be at least 8 characters long' })
   @MaxLength(128, { message: 'Password must not exceed 128 characters' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).+$/, {
     message:
       'Password must include uppercase, lowercase, number and special character',
   })
-  password: string;
+  password?: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @MaxLength(20, { message: 'First name must not exceed 20 characters' })
-  firstName: string;
+  firstName?: string;
 
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(20, { message: 'First name must not exceed 20 characters' })
-  lastName: string;
+  @IsOptional()
+  @MaxLength(20, { message: 'Last name must not exceed 20 characters' })
+  lastName?: string;
 }

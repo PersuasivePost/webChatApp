@@ -43,9 +43,9 @@
 
 6. **Phase 6: Additional Features(In Progress)**
 
-- User profile update
-- User search (username/email)
-- Group admin controls (add/remove/change info)
+- User profile update ✅
+- User search (username/email) ✅
+- Group admin controls (add/remove/change info) ✅
 - Basic notifications
 - Presence tracking
 - Block/unblock users
@@ -56,7 +56,7 @@
 **Phase 7: Security & Stability Enhancements**
 
 - Add refresh token support
-- Implement OAuth (Google, etc.)
+- Implement OAuth (Google, etc.) (at nodemailer)
 - Apply rate limiting (login, socket, etc.)
 - Enable Helmet and security headers
 - Add audit logging (user actions, deletions)
@@ -72,9 +72,10 @@
 
 **Phase 9: Monitoring, Testing, DevOps**
 
+- Dockerize backend with multistage build
+- Deploy with `kubernets`
 - Integrate Prometheus / Grafana (metrics)
 - Set up Sentry (error tracking)
 - Unit & integration testing
 - End-to-end (e2e) test flows
 - API documentation with Swagger
-- Dockerize backend with multi-stage build

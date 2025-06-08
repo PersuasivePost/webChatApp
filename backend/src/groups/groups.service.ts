@@ -1,9 +1,11 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { UpdateGroupDto } from './dto';
 
 @Injectable()
 export class GroupsService {
@@ -60,5 +62,114 @@ export class GroupsService {
     return {
       message: 'Successfully joined group',
     };
+  }
+
+  //
+  async getGroupMembers(groupId: string) {
+    return this.prisma.groupMembers.findMany({
+      where: { groupId },
+      include: { user: true },
+    });
+  }
+
+  // update group
+  async updateGroup(groupId: string, adminId: string, dto: UpdateGroupDto) {
+    const group = await this.prisma.group.findUnique({
+      where: {
+        id: groupId,
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.adminId !== adminId) {
+      throw new ForbiddenException('Only the group admin can update the group');
+    }
+
+    return this.prisma.group.update({
+      where: {
+        id: groupId,
+      },
+      data: dto,
+    });
+  }
+
+  // add member
+  async addMember(groupId: string, adminId: string, userId: string) {
+    const group = await this.prisma.group.findUnique({
+      where: {
+        id: groupId,
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.adminId !== adminId) {
+      throw new ForbiddenException(
+        'Only the group admin can add group members',
+      );
+    }
+
+    const existingMember = await this.prisma.groupMembers.findFirst({
+      where: {
+        groupId,
+        userId,
+      },
+    });
+
+    if (existingMember) {
+      throw new ForbiddenException('User is already a member of this group');
+    }
+
+    return this.prisma.groupMembers.create({
+      data: {
+        userId,
+        groupId,
+      },
+    });
+  }
+
+  // remove member
+  async removeMember(groupId: string, adminId: string, userId: string) {
+    const group = await this.prisma.group.findUnique({
+      where: {
+        id: groupId,
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    if (group.adminId !== adminId) {
+      throw new ForbiddenException(
+        'Only the group admin can add group members',
+      );
+    }
+
+    if (userId === adminId) {
+      throw new ForbiddenException('Cannot remove the group admin');
+    }
+
+    const membership = await this.prisma.groupMembers.findFirst({
+      where: {
+        groupId,
+        userId,
+      },
+    });
+
+    if (!membership) {
+      throw new NotFoundException('User is not a member of this group');
+    }
+
+    return this.prisma.groupMembers.delete({
+      where: {
+        id: membership.id,
+      },
+    });
   }
 }

@@ -7,10 +7,14 @@ import {
   HttpException,
   Post,
   Get,
+  Patch,
+  Param,
+  Delete,
 } from '@nestjs/common';
 import { JwtGuard } from 'src/auth/guards';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { GroupsService } from './groups.service';
+import { AddMemberDto, UpdateGroupDto } from './dto';
 
 @Controller('groups')
 @UseGuards(JwtGuard)
@@ -52,5 +56,41 @@ export class GroupsController {
   @Get('groups')
   async getUserGroups(@Request() req) {
     return this.usersService.getUserGroups(req.user.id);
+  }
+
+  // get group by ID
+  @Get(':id/members')
+  async getGroupMembers(@Param('id') groupId: string) {
+    return this.groupsService.getGroupMembers(groupId);
+  }
+
+  // update group
+  @Patch(':id')
+  async updateGroup(
+    @Param('id') groupId: string,
+    @Body() dto: UpdateGroupDto,
+    @Request() req,
+  ) {
+    return this.groupsService.updateGroup(groupId, req.user.id, dto);
+  }
+
+  // add member
+  @Post(':id/add-member')
+  async addMember(
+    @Param('id') groupId: string,
+    @Body() dto: AddMemberDto,
+    @Request() req,
+  ) {
+    return this.groupsService.addMember(groupId, req.user.id, dto.userId);
+  }
+
+  // remove member
+  @Delete(':id/remove-member/:userId')
+  async removeMember(
+    @Param('id') groupId: string,
+    @Param('userId') userId: string,
+    @Request() req,
+  ) {
+    return this.groupsService.removeMember(groupId, req.user.id, userId);
   }
 }
