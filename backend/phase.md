@@ -46,7 +46,7 @@
 - User profile update ✅
 - User search (username/email) ✅
 - Group admin controls (add/remove/change info) ✅
-- Basic notifications
+- Basic notifications ✅
 - Presence tracking
 - Block/unblock users
 - Pagination for chat history

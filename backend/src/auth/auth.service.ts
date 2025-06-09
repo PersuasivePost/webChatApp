@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { MailService } from 'src/mail/mail.service';
 import { RegisterDto } from './dto';
 import * as argon2 from 'argon2';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/mail/prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -93,6 +93,8 @@ export class AuthService {
     code: string,
     password: string,
     username: string,
+    firstName: string,
+    lastName: string,
   ) {
     // check if user already exists (means already verified)
     const existingUser = await this.usersService.findByEmail(email);
@@ -122,8 +124,8 @@ export class AuthService {
       email,
       username,
       password: hashedPassword,
-      firstName: '', // Provide actual first name if available
-      lastName: '', // Provide actual last name if available
+      firstName,
+      lastName,
       isEmailVerified: true,
     });
 

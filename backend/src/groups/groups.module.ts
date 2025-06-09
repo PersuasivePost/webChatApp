@@ -1,4 +1,4 @@
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/mail/prisma/prisma.service';
 import { GroupsController } from './groups.controller';
 import { GroupsService } from './groups.service';
 import { Module } from '@nestjs/common';

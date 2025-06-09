@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FriendshipStatus, User } from '../../generated/prisma';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from 'src/mail/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import * as argon2 from 'argon2';
 

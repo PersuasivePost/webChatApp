@@ -28,7 +28,7 @@ export class MailService {
       html: `
         <h1>Email Verification</h1>
         <p>Your verification code is: <strong>${verificationCode}</strong></p>
-        <p>This code will expire in 24 hours.</p>
+        <p>This code will expire in 15 minutes.</p>
       `,
     };
     await this.transporter.sendMail(mailOptions);

@@ -41,9 +41,18 @@ export class AuthController {
       code: string;
       password: string;
       username: string;
+      firstName: string;
+      lastName: string;
     },
   ) {
-    return await this.authService.verifyEmail(body.email, body.code, body.password, body.username);
+    return await this.authService.verifyEmail(
+      body.email,
+      body.code,
+      body.password,
+      body.username,
+      body.firstName,
+      body.lastName,
+    );
   }
 
   @UseGuards(JwtGuard)
