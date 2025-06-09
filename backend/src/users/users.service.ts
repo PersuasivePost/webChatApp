@@ -5,11 +5,15 @@ import {
 } from '@nestjs/common';
 import { FriendshipStatus, User } from '../../generated/prisma';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { MailService } from 'src/mail/mail.service';
 import * as argon2 from 'argon2';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mailService: MailService,
+  ) {}
 
   // User CRUD
   async findById(id: string): Promise<User | null> {
@@ -41,6 +45,7 @@ export class UsersService {
     password: string;
     firstName: string;
     lastName: string;
+    isEmailVerified?: boolean;
   }): Promise<User> {
     return this.prisma.user.create({ data });
   }
@@ -69,13 +74,27 @@ export class UsersService {
       );
     }
 
-    return this.prisma.friendship.create({
+    const friendRequest = await this.prisma.friendship.create({
       data: {
         userId,
         friendId,
         status: FriendshipStatus.PENDING,
       },
     });
+
+    // Nodemailer logic:
+    const friend = await this.prisma.user.findUnique({
+      where: { id: friendId },
+    });
+    const sender = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (friend && sender) {
+      await this.mailService.sendFriendRequestNotification(
+        friend.email,
+        sender.username,
+      );
+    }
+
+    return friendRequest;
   }
 
   // Accept friend request

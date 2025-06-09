@@ -22,6 +22,8 @@ model User {
   createdAt DateTime @default(now())
   firstName String
   lastName String
+
+  isEmailVerified Boolean @default(false)
   // Relations
 
   friendshipsInitiated Friendship[] @relation("UserFriendshipsInitiated")
@@ -33,6 +35,8 @@ model User {
   messages Message[] @relation("UserMessages")
 
   DeletedMessage DeletedMessage[]
+
+  verificationCodes VerificationCode[]
 }
 
 model Friendship {
@@ -107,4 +111,12 @@ model DeletedMessage {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([messageId, userId]) 
+}
+
+model VerificationCode {
+  id String @id @default(uuid())
+  userId String
+  code String
+  expiresAt DateTime
+  user User @relation(fields: [userId], references: [id])
 }

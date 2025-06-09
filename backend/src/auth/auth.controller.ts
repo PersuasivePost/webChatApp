@@ -32,9 +32,31 @@ export class AuthController {
     return await this.authService.login(emailOrUsername, dto.password);
   }
 
+  //
+  @Post('verify-email')
+  async verifyEmail(@Body() body: { email: string; code: string }) {
+    return await this.authService.verifyEmail(body.email, body.code);
+  }
+
   @UseGuards(JwtGuard)
   @Get('me')
   getProfile(@Request() req) {
     return { message: 'Authenticated', user: req.user };
+  }
+
+  @Post('request-password-reset')
+  async requestPasswordReset(@Body('email') email: string) {
+    return this.authService.requestPasswordReset(email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(
+    @Body() body: { email: string; code: string; newPassword: string },
+  ) {
+    return this.authService.resetPassword(
+      body.email,
+      body.code,
+      body.newPassword,
+    );
   }
 }
