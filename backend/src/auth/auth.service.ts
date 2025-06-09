@@ -30,41 +30,116 @@ export class AuthService {
       throw new ConflictException('Email or username already in use');
     }
 
-    const hashedPassword = await argon2.hash(data.password);
-
-    // create user with isEmailVerified: false
-    const user = await this.usersService.createUser({
-      ...data,
-      password: hashedPassword,
-      isEmailVerified: false,
+    await this.prismaService.verificationCode.deleteMany({
+      where: { email: data.email },
     });
 
-    // nodemailer logic:
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min expiry
 
     await this.prismaService.verificationCode.create({
       data: {
-        userId: user.id,
+        userId: null,
+        email: data.email,
         code,
         expiresAt,
       },
     });
-    // end of nodemailer logic
 
-    const accessToken = this.signToken(user.id, user.email, user.username);
-
-    const { password, ...safeUser } = user;
-
-    return {
-      access_token: accessToken,
-      user: safeUser,
-    };
-
-    // send email
-    await this.mailService.sendVerificationEmail(user.email, code);
+    await this.mailService.sendVerificationEmail(data.email, code);
 
     return { message: 'Verification code sent to your email' };
+
+    // const hashedPassword = await argon2.hash(data.password);
+
+    // create user with isEmailVerified: false
+    // const user = await this.usersService.createUser({
+    //   ...data,
+    //   password: hashedPassword,
+    //   isEmailVerified: false,
+    // });
+
+    // // nodemailer logic:
+    // const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min expiry
+
+    // await this.prismaService.verificationCode.create({
+    //   data: {
+    //     userId: user.id,
+    //     code,
+    //     expiresAt,
+    //   },
+    // });
+
+    // send verification email
+    // await this.mailService.sendVerificationEmail(user.email, code);
+
+    // return { message: 'Verification code sent to your email' };
+
+    // end of nodemailer logic
+
+    // const accessToken = this.signToken(user.id, user.email, user.username);
+
+    // const { password, ...safeUser } = user;
+
+    // return {
+    //   access_token: accessToken,
+    //   user: safeUser,
+    // };
+  }
+
+  async verifyEmail(
+    email: string,
+    code: string,
+    password: string,
+    username: string,
+  ) {
+    // check if user already exists (means already verified)
+    const existingUser = await this.usersService.findByEmail(email);
+    if (existingUser) {
+      throw new ConflictException('Email already verified and user exists'); // add this
+    }
+
+    //
+    const record = await this.prismaService.verificationCode.findFirst({
+      where: {
+        email,
+        code,
+      },
+    });
+
+    if (!record) {
+      throw new UnauthorizedException('Invalid verification code');
+    }
+
+    if (record.expiresAt < new Date()) {
+      throw new UnauthorizedException('Verification code expired');
+    }
+
+    const hashedPassword = await argon2.hash(password);
+
+    const user = await this.usersService.createUser({
+      email,
+      username,
+      password: hashedPassword,
+      firstName: '', // Provide actual first name if available
+      lastName: '', // Provide actual last name if available
+      isEmailVerified: true,
+    });
+
+    //
+    await this.prismaService.verificationCode.updateMany({
+      where: { email },
+      data: { userId: user.id },
+    });
+
+    await this.prismaService.verificationCode.delete({
+      where: {
+        id: record.id,
+      },
+    });
+
+    return { message: 'Email verified and user account created successfully' };
   }
 
   async login(emailOrUsername: string, password: string) {
@@ -97,44 +172,44 @@ export class AuthService {
     };
   }
 
-  async verifyEmail(email: string, code: string) {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+  // async verifyEmail(email: string, code: string) {
+  //   const user = await this.usersService.findByEmail(email);
+  //   if (!user) {
+  //     throw new NotFoundException('User not found');
+  //   }
 
-    const record = await this.prismaService.verificationCode.findFirst({
-      where: {
-        userId: user.id,
-        code,
-      },
-    });
+  //   const record = await this.prismaService.verificationCode.findFirst({
+  //     where: {
+  //       userId: user.id,
+  //       code,
+  //     },
+  //   });
 
-    if (!record) {
-      throw new UnauthorizedException('Invalid verification code');
-    }
+  //   if (!record) {
+  //     throw new UnauthorizedException('Invalid verification code');
+  //   }
 
-    if (record.expiresAt < new Date()) {
-      throw new UnauthorizedException('Verification code expired');
-    }
+  //   if (record.expiresAt < new Date()) {
+  //     throw new UnauthorizedException('Verification code expired');
+  //   }
 
-    await this.prismaService.user.update({
-      where: {
-        id: user.id,
-      },
-      data: {
-        isEmailVerified: true,
-      },
-    });
+  //   await this.prismaService.user.update({
+  //     where: {
+  //       id: user.id,
+  //     },
+  //     data: {
+  //       isEmailVerified: true,
+  //     },
+  //   });
 
-    await this.prismaService.verificationCode.delete({
-      where: {
-        id: record.id,
-      },
-    });
+  //   await this.prismaService.verificationCode.delete({
+  //     where: {
+  //       id: record.id,
+  //     },
+  //   });
 
-    return { message: 'Email verified successfully' };
-  }
+  //   return { message: 'Email verified successfully' };
+  // }
 
   // Request password reset
   async requestPasswordReset(email: string) {
@@ -150,6 +225,7 @@ export class AuthService {
     await this.prismaService.verificationCode.create({
       data: {
         userId: user.id,
+        email: user.email,
         code,
         expiresAt,
       },

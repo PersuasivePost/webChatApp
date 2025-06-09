@@ -115,8 +115,9 @@ model DeletedMessage {
 
 model VerificationCode {
   id String @id @default(uuid())
-  userId String
+  userId String?
+  email String
   code String
   expiresAt DateTime
-  user User @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
 }

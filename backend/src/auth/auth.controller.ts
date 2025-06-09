@@ -34,8 +34,16 @@ export class AuthController {
 
   //
   @Post('verify-email')
-  async verifyEmail(@Body() body: { email: string; code: string }) {
-    return await this.authService.verifyEmail(body.email, body.code);
+  async verifyEmail(
+    @Body()
+    body: {
+      email: string;
+      code: string;
+      password: string;
+      username: string;
+    },
+  ) {
+    return await this.authService.verifyEmail(body.email, body.code, body.password, body.username);
   }
 
   @UseGuards(JwtGuard)
