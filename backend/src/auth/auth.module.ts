@@ -24,6 +24,6 @@ import { MailModule } from '../mail/mail.module';
   ],
   providers: [AuthService, JwtStrategy, PrismaService],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

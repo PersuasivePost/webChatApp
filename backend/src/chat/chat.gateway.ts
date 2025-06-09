@@ -32,6 +32,8 @@ export class ChatGateway
 {
   private server: Server;
 
+  private redisClient;
+
   constructor(private readonly chatService: ChatService) {}
 
   async afterInit(server: Server) {
@@ -43,16 +45,52 @@ export class ChatGateway
     await pubClient.connect();
     await subClient.connect();
 
+    this.redisClient = pubClient;
     this.server.adapter(createAdapter(pubClient, subClient));
     console.log('WebSocket server initialized with Redis adapter');
   }
 
-  handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+  async handleConnection(client: Socket) {
+    const userId = client.data?.user?.id;
+    if (userId) {
+      await this.markUserOnline(userId);
+      console.log(`User ${userId} connected`);
+    }
+    // console.log(`Client connected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+  async handleDisconnect(client: Socket) {
+    const userId = client.data?.user?.id;
+    if (userId) {
+      await this.markUserOffline(userId);
+      console.log(`User ${userId} disconnected`);
+    }
+    //console.log(`Client disconnected: ${client.id}`);
+  }
+
+  private async markUserOnline(userId: string) {
+    await this.redisClient.sAdd('online_users', userId);
+    await this.redisClient.set(`last_seen:${userId}`, Date.now().toString());
+  }
+
+  private async markUserOffline(userId: string) {
+    await this.redisClient.sRem('online_users', userId);
+    await this.redisClient.set(`last_seen:${userId}`, Date.now().toString());
+  }
+
+  @SubscribeMessage('getOnlineUsers')
+  async handleGetOnlineUsers(@ConnectedSocket() client: Socket) {
+    const onlineUsers = await this.redisClient.sMembers('online_users');
+    return { onlineUsers };
+  }
+
+  @SubscribeMessage('getLastSeen')
+  async handleGetLastSeen(@MessageBody('userId') userId: string) {
+    const timestamp = await this.redisClient.get(`last_seen:${userId}`);
+    return {
+      userId,
+      lastSeen: timestamp ? new Date(Number(timestamp)).toISOString() : null,
+    };
   }
 
   @SubscribeMessage('joinRoom')
