@@ -80,4 +80,19 @@ export class UsersController {
 
     return this.usersService.searchUsers(query, req.user.id);
   }
+
+  // block user
+  @UseGuards(JwtGuard)
+  @Post('block')
+  async blockUser(@Request() req, @Body('blockedId') blockedId: string) {
+    await this.usersService.blockUser(req.user.id, blockedId);
+    return { message: 'User blocked' };
+  }
+
+  @UseGuards(JwtGuard)
+  @Post('unblock')
+  async unblockUser(@Request() req, @Body('blockedId') blockedId: string) {
+    await this.usersService.unblockUser(req.user.id, blockedId);
+    return { message: 'User unblocked' };
+  }
 }

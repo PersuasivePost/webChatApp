@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { FriendshipStatus, User } from '../../generated/prisma';
-import { PrismaService } from 'src/mail/prisma/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import * as argon2 from 'argon2';
 
@@ -259,5 +259,47 @@ export class UsersService {
       },
       take: 20, // Limit results to 20
     });
+  }
+
+  // blocked user logic
+  async blockUser(blockerId: string, blockedId: string) {
+    if (blockerId == blockedId) {
+      throw new Error('Cannot block yourself');
+    }
+
+    return this.prisma.blockedUser.create({
+      data: {
+        blockerId,
+        blockedId,
+      },
+    });
+  }
+
+  async unblockUser(blockerId: string, blockedId: string) {
+    return this.prisma.blockedUser.deleteMany({
+      where: {
+        blockerId,
+        blockedId,
+      },
+    });
+  }
+
+  async isBlocked(userId: string, otherUserId: string) {
+    const block = await this.prisma.blockedUser.findFirst({
+      where: {
+        OR: [
+          {
+            blockerId: userId,
+            blockedId: otherUserId,
+          },
+          {
+            blockerId: otherUserId,
+            blockedId: userId,
+          },
+        ],
+      },
+    });
+
+    return !!block;
   }
 }

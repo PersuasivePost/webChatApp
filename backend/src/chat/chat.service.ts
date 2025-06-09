@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/mail/prisma/prisma.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { MessageDto } from './dto/message.dto';
 
 @Injectable()
@@ -61,15 +61,31 @@ export class ChatService {
     return { messageId };
   }
 
-  async getChatHistory(roomId: string, userId: string) {
+  async getChatHistory(
+    roomId: string,
+    userId: string,
+    cursor?: string,
+    limit: number = 20,
+  ) {
+    // prevent abuse
+    if (limit < 1) limit = 1;
+    if (limit > 100) limit = 100;
+
     // For group chat
     const groupMessages = await this.prisma.message.findMany({
       where: {
         groupId: roomId,
       },
       orderBy: {
-        createdAt: 'asc',
+        createdAt: 'desc',
       },
+      take: limit,
+      ...(cursor
+        ? {
+            skip: 1,
+            cursor: { id: cursor },
+          }
+        : {}),
       include: {
         sender: true,
       },
@@ -81,13 +97,31 @@ export class ChatService {
         privateChatId: roomId,
       },
       orderBy: {
-        createdAt: 'asc',
+        createdAt: 'desc',
       },
+      take: limit,
+      ...(cursor
+        ? {
+            skip: 1,
+            cursor: { id: cursor },
+          }
+        : {}),
       include: {
         sender: true,
       },
     });
 
-    return [...groupMessages, ...privateMessages];
+    const messages = [...groupMessages, ...privateMessages].sort(
+      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+    );
+
+    const nextCursor =
+      messages.length > 0 ? messages[messages.length - 1].id : null;
+
+    return {
+      messages,
+      nextCursor,
+      hasMore: messages.length === limit,
+    };
   }
 }

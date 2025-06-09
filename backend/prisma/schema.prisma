@@ -37,6 +37,9 @@ model User {
   DeletedMessage DeletedMessage[]
 
   verificationCodes VerificationCode[]
+
+  blockedUsers BlockedUser[] @relation("Blocker")
+  blockedByUsers BlockedUser[] @relation("Blocked")
 }
 
 model Friendship {
@@ -120,4 +123,16 @@ model VerificationCode {
   code String
   expiresAt DateTime
   user User? @relation(fields: [userId], references: [id])
+}
+
+model BlockedUser {
+  id String @id @default(uuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  // Relations
+  blocker User @relation("Blocker", fields: [blockerId], references: [id])
+  blocked User @relation("Blocked", fields: [blockedId], references: [id])
+  @@unique([blockerId, blockedId])
 }

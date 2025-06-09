@@ -22,6 +22,7 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { MessageValidationPipe } from './pipes/message-validation.pipe';
 import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
+import { UsersService } from 'src/users/users.service';
 
 @WebSocketGateway({ cors: true })
 @UseFilters(WsExceptionFilter)
@@ -34,7 +35,10 @@ export class ChatGateway
 
   private redisClient;
 
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly usersService: UsersService,
+  ) {}
 
   async afterInit(server: Server) {
     this.server = server;
@@ -117,6 +121,26 @@ export class ChatGateway
     @MessageBody() message: MessageDto,
     @ConnectedSocket() client: Socket,
   ) {
+    // block unnblock user logic
+    const senderId = client.data.user.id;
+    const recipientId = message.to;
+
+    if (recipientId) {
+      const isBlocked = await this.usersService.isBlocked(
+        senderId,
+        recipientId,
+      );
+
+      if (isBlocked) {
+        return {
+          status: 'error',
+          message:
+            'You cannot send messages to this user as they have blocked you.',
+        };
+      }
+    }
+
+    // continue
     const saved = await this.chatService.saveMessage(
       message,
       client.data.user.id,

@@ -48,8 +48,8 @@
 - Group admin controls (add/remove/change info) ✅
 - Basic notifications ✅
 - Presence tracking ✅
-- Block/unblock users
-- Pagination for chat history
+- Block/unblock users ✅
+- Pagination for chat history ✅
 
 ---
 
