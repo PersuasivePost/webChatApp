@@ -11,6 +11,8 @@ import { RegisterDto } from './dto';
 import * as argon2 from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Profile } from 'passport-google-oauth20';
+import { randomBytes } from 'crypto';
+import { addDays } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -166,11 +168,13 @@ export class AuthService {
     }
 
     const accessToken = this.signToken(user.id, user.email, user.username);
+    const refreshToken = await this.generateRefreshToken(user.id);
 
     const { password: _, ...safeUser } = user;
 
     return {
       access_token: accessToken,
+      refresh_token: refreshToken,
       user: safeUser,
     };
   }
@@ -304,6 +308,66 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  private async generateRefreshToken(userId: string): Promise<string> {
+    const token = randomBytes(64).toString('hex');
+    const expiresAt = addDays(new Date(), 7);
+
+    await this.prismaService.refreshToken.create({
+      data: {
+        token,
+        userId,
+        expiresAt,
+      },
+    });
+
+    return token;
+  }
+
+  public async revokeRefreshToken(token: string) {
+    await this.prismaService.refreshToken.updateMany({
+      where: { token },
+      data: { revoked: true },
+    });
+  }
+
+  async refreshTokens(refreshToken: string) {
+    const stored = await this.prismaService.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true },
+    });
+
+    if (
+      !stored ||
+      stored.revoked ||
+      stored.expiresAt < new Date() ||
+      !stored.user
+    ) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // rotate: revoke old, issue new
+    await this.revokeRefreshToken(refreshToken);
+    const newRefreshToken = await this.generateRefreshToken(stored.userId);
+
+    const accessToken = this.signToken(
+      stored.user.id,
+      stored.user.email,
+      stored.user.username,
+    );
+
+    return {
+      access_token: accessToken,
+      refresh_token: newRefreshToken,
+      user: {
+        id: stored.user.id,
+        username: stored.user.username,
+        email: stored.user.email,
+        firstName: stored.user.firstName,
+        lastName: stored.user.lastName,
+      },
+    };
   }
 
   private signToken(userId: string, email: string, username: string) {

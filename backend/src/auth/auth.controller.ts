@@ -104,9 +104,21 @@ export class AuthController {
 
   @Post('logout')
   @UseGuards(JwtGuard)
-  async logout(@Req() req, @Res() res) {
+  async logout(
+    @Req() req,
+    @Body('refresh_token') refreshToken: string,
+    @Res() res,
+  ) {
     // For JWT, logout is handled on the client by deleting the token.
     // Optionally, you can implement token blacklisting here.
+    if (refreshToken) {
+      await this.authService.revokeRefreshToken(refreshToken);
+    }
     return res.status(200).json({ message: 'Logged out successfully' });
+  }
+
+  @Post('refresh')
+  async refresh(@Body('refresh_token') refreshToken: string) {
+    return this.authService.refreshTokens(refreshToken);
   }
 }

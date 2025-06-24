@@ -40,6 +40,8 @@ model User {
 
   blockedUsers BlockedUser[] @relation("Blocker")
   blockedByUsers BlockedUser[] @relation("Blocked")
+
+  refreshTokens RefreshToken[]
 }
 
 model Friendship {
@@ -135,4 +137,14 @@ model BlockedUser {
   blocker User @relation("Blocker", fields: [blockerId], references: [id])
   blocked User @relation("Blocked", fields: [blockedId], references: [id])
   @@unique([blockerId, blockedId])
+}
+
+model RefreshToken {
+  id String @id @default(uuid())
+  token String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked Boolean @default(false)
 }

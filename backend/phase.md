@@ -51,16 +51,16 @@
 - Block/unblock users ✅
 - Pagination for chat history ✅
 
----
-
 **Phase 7: Security & Stability Enhancements**
 
-- Add refresh token support
-- Implement OAuth (Google, etc.) (at nodemailer)
+- Add refresh token support ✅
+- Implement OAuth (Google, etc.) ✅
 - Apply rate limiting (login, socket, etc.)
 - Enable Helmet and security headers
 - Add audit logging (user actions, deletions)
 - Harden WebSocket guards and validation
+
+---
 
 **Phase 8: Chat UX Enhancements**
 
