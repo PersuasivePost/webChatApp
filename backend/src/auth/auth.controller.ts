@@ -7,10 +7,13 @@ import {
   UseGuards,
   Request,
   Get,
+  Req,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto';
 import { JwtGuard } from './guards/jwt.guards';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
@@ -75,5 +78,35 @@ export class AuthController {
       body.code,
       body.newPassword,
     );
+  }
+
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  async googleAuth() {
+    // passport will redirect to Google for authentication
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthRedirect(@Req() req, @Res() res) {
+    const user = req.user;
+
+    const accessToken = this.authService['signToken'](
+      user.id,
+      user.email,
+      user.username,
+    );
+
+    return res.redirect(
+      `http://localhost:4200/oauth-success?token=${accessToken}`,
+    );
+  }
+
+  @Post('logout')
+  @UseGuards(JwtGuard)
+  async logout(@Req() req, @Res() res) {
+    // For JWT, logout is handled on the client by deleting the token.
+    // Optionally, you can implement token blacklisting here.
+    return res.status(200).json({ message: 'Logged out successfully' });
   }
 }

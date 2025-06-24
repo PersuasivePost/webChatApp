@@ -10,6 +10,7 @@ import { MailService } from 'src/mail/mail.service';
 import { RegisterDto } from './dto';
 import * as argon2 from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Profile } from 'passport-google-oauth20';
 
 @Injectable()
 export class AuthService {
@@ -278,6 +279,31 @@ export class AuthService {
     });
 
     return { message: 'Password reset successful' };
+  }
+
+  // OAuth2 logic
+  async validateGoogleUser(profile: Profile) {
+    const email = profile.emails?.[0]?.value;
+
+    if (!email) {
+      throw new UnauthorizedException('Google account does not have an email');
+    }
+
+    const username = profile.displayName || email.split('@')[0] || 'googleuser';
+    let user = await this.usersService.findByEmail(email);
+
+    if (!user) {
+      user = await this.usersService.createUser({
+        email,
+        username,
+        password: '', // not used for google users
+        firstName: profile.name?.givenName || '',
+        lastName: profile.name?.familyName || '',
+        isEmailVerified: true,
+      });
+    }
+
+    return user;
   }
 
   private signToken(userId: string, email: string, username: string) {
