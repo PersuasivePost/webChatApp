@@ -6,6 +6,7 @@ import { GroupsModule } from './groups/groups.module';
 //import { CsrfTokenController } from 'src/csrf-token.controller';
 import { MailModule } from './mail/mail.module';
 import { ChatModule } from './chat/chat.module';
+import { AuditModule } from './audit/audit.module';
 //import { ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
@@ -20,6 +21,7 @@ import { ChatModule } from './chat/chat.module';
     //   ttl: 60,
     //   limit: 10,
     // }),
+    AuditModule
   ],
   //controllers: [CsrfTokenController],
   controllers: [],

@@ -47,6 +47,7 @@ export class AuthController {
       firstName: string;
       lastName: string;
     },
+    @Req() req,
   ) {
     return await this.authService.verifyEmail(
       body.email,
@@ -55,6 +56,7 @@ export class AuthController {
       body.username,
       body.firstName,
       body.lastName,
+      req,
     );
   }
 
@@ -72,14 +74,18 @@ export class AuthController {
   @Post('reset-password')
   async resetPassword(
     @Body() body: { email: string; code: string; newPassword: string },
+    @Req() req,
   ) {
     return this.authService.resetPassword(
       body.email,
       body.code,
       body.newPassword,
+      '',
+      req,
     );
   }
 
+  // gooogle auth
   @Get('google')
   @UseGuards(AuthGuard('google'))
   async googleAuth() {
@@ -90,6 +96,9 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res() res) {
     const user = req.user;
+
+    // audit lof
+    await this.authService.oauthLogin(user.id, req);
 
     const accessToken = this.authService['signToken'](
       user.id,
@@ -114,6 +123,9 @@ export class AuthController {
     if (refreshToken) {
       await this.authService.revokeRefreshToken(refreshToken);
     }
+
+    // audit log
+    await this.authService.logout(req.user.id, req);
     return res.status(200).json({ message: 'Logged out successfully' });
   }
 

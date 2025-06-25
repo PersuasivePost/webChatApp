@@ -42,6 +42,7 @@ model User {
   blockedByUsers BlockedUser[] @relation("Blocked")
 
   refreshTokens RefreshToken[]
+  auditLogs AuditLog[] // Opposite relation for AuditLog.user
 }
 
 model Friendship {
@@ -147,4 +148,16 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
   revoked Boolean @default(false)
+}
+
+model AuditLog {
+  id String @id @default(uuid())
+  userId String?
+  action String
+  details String?
+  ip String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
 }

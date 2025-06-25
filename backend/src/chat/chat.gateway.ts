@@ -23,6 +23,7 @@ import { MessageValidationPipe } from './pipes/message-validation.pipe';
 import { createClient } from 'redis';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { UsersService } from 'src/users/users.service';
+import { AuditLogService } from 'src/audit/audit-log.service';
 
 @WebSocketGateway({ cors: true })
 @UseFilters(WsExceptionFilter)
@@ -38,6 +39,7 @@ export class ChatGateway
   constructor(
     private readonly chatService: ChatService,
     private readonly usersService: UsersService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async afterInit(server: Server) {
@@ -98,19 +100,35 @@ export class ChatGateway
   }
 
   @SubscribeMessage('joinRoom')
-  handleJoinRoom(
+  async handleJoinRoom(
     @MessageBody() roomId: string,
     @ConnectedSocket() client: Socket,
   ) {
+    // audit log
+    await this.auditLogService.log(
+      client.data.user.id,
+      'join_group',
+      `Joined group ${roomId}`,
+      client.handshake.address,
+    );
+
     client.join(roomId);
     return { status: 'joined', roomId };
   }
 
   @SubscribeMessage('leaveRoom')
-  handleLeaveRoom(
+  async handleLeaveRoom(
     @MessageBody() roomId: string,
     @ConnectedSocket() client: Socket,
   ) {
+    // audit log
+    await this.auditLogService.log(
+      client.data.user.id,
+      'leave_group',
+      `Left group ${roomId}`,
+      client.handshake.address,
+    );
+
     client.leave(roomId);
     return { status: 'left', roomId };
   }
@@ -138,6 +156,13 @@ export class ChatGateway
             'You cannot send messages to this user as they have blocked you.',
         };
       }
+
+      await this.auditLogService.log(
+        client.data.user.id,
+        'send_message',
+        `Sent message in room ${message.groudId || message.to}`,
+        client.handshake.address,
+      );
     }
 
     // continue
@@ -163,6 +188,14 @@ export class ChatGateway
     @MessageBody('messageId') messageId: string,
     @ConnectedSocket() client: Socket,
   ) {
+    // audit log
+    await this.auditLogService.log(
+      client.data.user.id,
+      'delete_message',
+      `Deleted message ${messageId}`,
+      client.handshake.address,
+    );
+
     try {
       const result = await this.chatService.deleteMessageForEveryone(
         messageId,

@@ -7,12 +7,15 @@ import { FriendshipStatus, User } from '../../generated/prisma';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
 import * as argon2 from 'argon2';
+import { AuditLogService } from 'src/audit/audit-log.service';
+import { AnyCnameRecord } from 'dns';
 
 @Injectable()
 export class UsersService {
   constructor(
     private prisma: PrismaService,
     private mailService: MailService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   // User CRUD
@@ -51,7 +54,12 @@ export class UsersService {
   }
 
   // Friendship CRUD
-  async sendFriendRequest(userId: string, friendId: string) {
+  async sendFriendRequest(
+    userId: string,
+    friendId: string,
+    requestId: string,
+    req?: any,
+  ) {
     // Prevent sending request to self
     if (userId === friendId) {
       throw new ForbiddenException('Cannot send friend request to self');
@@ -94,11 +102,19 @@ export class UsersService {
       );
     }
 
+    // Audit log
+    await this.auditLogService.log(
+      userId,
+      'send_friend_request',
+      `Sent to ${friendId}`,
+      req?.ip,
+    );
+
     return friendRequest;
   }
 
   // Accept friend request
-  async acceptFriendRequest(userId: string, requestId: string) {
+  async acceptFriendRequest(userId: string, requestId: string, req?: any) {
     const request = await this.prisma.friendship.findUnique({
       where: { id: requestId },
     });
@@ -108,6 +124,14 @@ export class UsersService {
     if (request.status !== FriendshipStatus.PENDING)
       throw new ForbiddenException('Request is not pending');
 
+    // Audit log
+    await this.auditLogService.log(
+      userId,
+      'accept_friend_request',
+      `Accepted request from ${request.userId}`,
+      req?.ip,
+    );
+
     return this.prisma.friendship.update({
       where: { id: requestId },
       data: { status: FriendshipStatus.ACCEPTED },
@@ -115,7 +139,7 @@ export class UsersService {
   }
 
   // Reject friend request
-  async rejectFriendRequest(userId: string, requestId: string) {
+  async rejectFriendRequest(userId: string, requestId: string, req?: any) {
     const request = await this.prisma.friendship.findUnique({
       where: { id: requestId },
     });
@@ -124,6 +148,14 @@ export class UsersService {
       throw new ForbiddenException('Not authorized to reject this request');
     if (request.status !== FriendshipStatus.PENDING)
       throw new ForbiddenException('Request is not pending');
+
+    // Audit log
+    await this.auditLogService.log(
+      userId,
+      'reject_friend_request',
+      `Rejected request from ${request.userId}`,
+      req?.ip,
+    );
 
     return this.prisma.friendship.update({
       where: { id: requestId },
@@ -177,6 +209,7 @@ export class UsersService {
       firstName: string;
       lastName: string;
     }>,
+    req?: any,
   ): Promise<User> {
     const user = await this.findById(userId);
     if (!user) {
@@ -210,6 +243,14 @@ export class UsersService {
       }
     }
 
+    // audit log
+    await this.auditLogService.log(
+      userId,
+      'profile_update',
+      'User updated their profile',
+      req?.ip,
+    );
+
     return this.prisma.user.update({
       where: {
         id: userId,
@@ -223,7 +264,9 @@ export class UsersService {
   // User search by username or email
   async searchUsers(
     query: string,
+    userId: string,
     excludeUserId?: string,
+    req?: any,
   ): Promise<
     Array<{
       id: string;
@@ -236,6 +279,13 @@ export class UsersService {
     if (!query || query.trim().length === 0) {
       return [];
     }
+
+    await this.auditLogService.log(
+      userId,
+      'user_search',
+      `Searched for "${query}"`,
+      req?.ip,
+    );
 
     return this.prisma.user.findMany({
       where: {
@@ -262,10 +312,18 @@ export class UsersService {
   }
 
   // blocked user logic
-  async blockUser(blockerId: string, blockedId: string) {
+  async blockUser(blockerId: string, blockedId: string, req?: any) {
     if (blockerId == blockedId) {
       throw new Error('Cannot block yourself');
     }
+
+    // audit log
+    await this.auditLogService.log(
+      blockerId,
+      'block_user',
+      `Blocked user ${blockedId}`,
+      req?.ip,
+    );
 
     return this.prisma.blockedUser.create({
       data: {
@@ -275,7 +333,15 @@ export class UsersService {
     });
   }
 
-  async unblockUser(blockerId: string, blockedId: string) {
+  async unblockUser(blockerId: string, blockedId: string, req?: any) {
+    // audit log
+    await this.auditLogService.log(
+      blockerId,
+      'unblock_user',
+      `Unblocked user ${blockedId}`,
+      req?.ip,
+    );
+
     return this.prisma.blockedUser.deleteMany({
       where: {
         blockerId,

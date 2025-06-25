@@ -13,6 +13,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { Profile } from 'passport-google-oauth20';
 import { randomBytes } from 'crypto';
 import { addDays } from 'date-fns';
+import { AuditLogService } from 'src/audit/audit-log.service';
 
 @Injectable()
 export class AuthService {
@@ -21,9 +22,10 @@ export class AuthService {
     private jwtService: JwtService,
     private prismaService: PrismaService,
     private mailService: MailService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
-  async register(data: RegisterDto) {
+  async register(data: RegisterDto, req?: any) {
     const existingUser = await this.usersService.findByEmailOrUsername(
       data.email,
       data.username,
@@ -50,6 +52,14 @@ export class AuthService {
     });
 
     await this.mailService.sendVerificationEmail(data.email, code);
+
+    // audit log
+    await this.auditLogService.log(
+      null,
+      'register',
+      `Registration attempt for ${data.email}`,
+      req?.ip,
+    );
 
     return { message: 'Verification code sent to your email' };
 
@@ -98,6 +108,8 @@ export class AuthService {
     username: string,
     firstName: string,
     lastName: string,
+    userId: string,
+    req?: any,
   ) {
     // check if user already exists (means already verified)
     const existingUser = await this.usersService.findByEmail(email);
@@ -144,10 +156,18 @@ export class AuthService {
       },
     });
 
+    // audit log
+    await this.auditLogService.log(
+      userId,
+      'verify_email',
+      'Email verified',
+      req?.ip,
+    );
+
     return { message: 'Email verified and user account created successfully' };
   }
 
-  async login(emailOrUsername: string, password: string) {
+  async login(emailOrUsername: string, password: string, req?: any) {
     const user =
       (await this.usersService.findByEmail(emailOrUsername)) ||
       (await this.usersService.findByUsername?.(emailOrUsername)) ||
@@ -171,6 +191,9 @@ export class AuthService {
     const refreshToken = await this.generateRefreshToken(user.id);
 
     const { password: _, ...safeUser } = user;
+
+    // audit log
+    await this.auditLogService.log(user.id, 'login', 'User logged in', req?.ip);
 
     return {
       access_token: accessToken,
@@ -219,7 +242,7 @@ export class AuthService {
   // }
 
   // Request password reset
-  async requestPasswordReset(email: string) {
+  async requestPasswordReset(email: string, req?: any) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -240,11 +263,25 @@ export class AuthService {
 
     await this.mailService.sendPasswordResetEmail(user.email, code);
 
+    // audit log
+    await this.auditLogService.log(
+      null,
+      'request_password_reset',
+      `Requested for ${email}`,
+      req?.ip,
+    );
+
     return { message: 'Password reset code sent to your email' };
   }
 
   // Reset Password
-  async resetPassword(email: string, code: string, newPassword: string) {
+  async resetPassword(
+    email: string,
+    code: string,
+    newPassword: string,
+    userId: string,
+    req?: any,
+  ) {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
@@ -281,6 +318,13 @@ export class AuthService {
         id: record.id,
       },
     });
+
+    await this.auditLogService.log(
+      userId,
+      'reset_password',
+      'Password reset',
+      req?.ip,
+    );
 
     return { message: 'Password reset successful' };
   }
@@ -323,6 +367,18 @@ export class AuthService {
     });
 
     return token;
+  }
+
+  // oauthlogin auditlog copilot added 
+  async oauthLogin(userId: string, req?: any) {
+    await this.auditLogService.log(
+      userId,
+      'oauth_login',
+      'User logged in via OAuth',
+      req?.ip,
+    );
+
+    // rest of logic if needed
   }
 
   public async revokeRefreshToken(token: string) {
@@ -368,6 +424,16 @@ export class AuthService {
         lastName: stored.user.lastName,
       },
     };
+  }
+
+  // logout logic
+  async logout(userId: string, req?: any) {
+    await this.auditLogService.log(
+      userId,
+      'logout',
+      'User logged out',
+      req?.ip,
+    );
   }
 
   private signToken(userId: string, email: string, username: string) {
