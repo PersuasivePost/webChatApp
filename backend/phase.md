@@ -55,8 +55,8 @@
 
 - Add refresh token support ✅
 - Implement OAuth (Google, etc.) ✅
-- Apply rate limiting (login, socket, etc.)
-- Enable Helmet and security headers
+- Apply rate limiting (login, socket, etc.) // ttl error
+- Enable Helmet and security headers // already done
 - Add audit logging (user actions, deletions)
 - Harden WebSocket guards and validation
 
