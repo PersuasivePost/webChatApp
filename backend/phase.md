@@ -57,18 +57,20 @@
 - Implement OAuth (Google, etc.) ✅
 - Apply rate limiting (login, socket, etc.) // ttl error
 - Enable Helmet and security headers // already done
-- Add audit logging (user actions, deletions)
-- Harden WebSocket guards and validation
+- Add audit logging (user actions, deletions) ✅
+- Harden WebSocket guards and validation (half done)
 
 ---
 
-**Phase 8: Chat UX Enhancements**
+**Phase 8: Chat UX Enhancements** (after phase 9)
 
 - Message read receipts
 - Typing indicators (WebSocket)
 - File/image upload (S3/local)
 - Chat history pagination
 - Message search (by keyword/text)
+
+---
 
 **Phase 9: Monitoring, Testing, DevOps**
 
