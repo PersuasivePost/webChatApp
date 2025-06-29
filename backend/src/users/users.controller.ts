@@ -23,7 +23,12 @@ export class UsersController {
   @Post('friend-request')
   async sendFriendRequest(@Request() req, @Body('friendId') friendId: string) {
     const userId = req.user.id;
-    return this.usersService.sendFriendRequest(userId, friendId);
+    return this.usersService.sendFriendRequest(
+      userId,
+      friendId,
+      '', // Pass an empty string as requestId
+      req,
+    );
   }
 
   // Accept friend request
